@@ -321,6 +321,7 @@ function love.keypressed(key)
     if move == true then movePlayer(dx, dy) end
 
     if key == "r" then
+        walls = {}
         generateDungeon()
         placePlayerInStartingRoom()
     elseif key == "escape" then
