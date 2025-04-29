@@ -2,10 +2,18 @@
 -- For CMPM 170-03
 -- Raven Cruz and Shazer Rizzo
 
+--[[ TODO:
+    > write logic for splitting paragraphs when there are too few to fill every room
+    > write a Story class that can identify objectives from each story paragraph and
+        determine whther objectives are filled.
+]]
+require("descriptionGenerator");
+require("story_handler");
+
 local Entity = require("entity")
 local Wall = require("wall")
-require("descriptionGenerator");
-
+local story = require('text');
+local paragraphs = {};
 local walls = {};
 
 function love.load()
@@ -42,8 +50,11 @@ function love.load()
     font = love.graphics.newFont(14)
     love.graphics.setFont(font)
 
-    generateDungeon()
+    local dungeon = generateDungeon()
     placePlayerInStartingRoom()
+
+    storyToRooms(dungeon);
+
 end
 
 function generateDungeon()
@@ -65,7 +76,7 @@ function generateDungeon()
         width = GRID_DIM, 
         height = GRID_DIM, 
         children = {}, 
-        room = nil
+        room = nil,
     }
     local leaves = {}
     splitSpace(rootNode, 0, leaves)
@@ -87,6 +98,8 @@ function generateDungeon()
             end
         end
     end
+
+    return dungeon
 end
 
 -- Recursively split space using BSP
@@ -155,7 +168,8 @@ function createRoomsInLeaves(leaves)
                 x = roomX, y = roomY, width = roomW, height = roomH,
                 center = { x = roomX + math.floor(roomW / 2), y = roomY + math.floor(roomH / 2) },
                 description = generateRoomDescription(roomW, roomH),
-                index = i
+                index = i,
+                paragraph = ""
             }
 
             -- Carve room into the grid
@@ -277,11 +291,11 @@ function love.draw()
         end
     end
 
-    -- DEBUG
-    -- for _, room in ipairs(dungeon.rooms) do
-    --     love.graphics.setColor(1, 0, 0, 1)
-    --     love.graphics.print(room.index, room.x * CELL_SIZE, room.y * CELL_SIZE)
-    -- end 
+    -- DEBUG: print room index
+    for _, room in ipairs(dungeon.rooms) do
+        love.graphics.setColor(1, 0, 0, 1)
+        love.graphics.print(room.index, room.x * CELL_SIZE, room.y * CELL_SIZE)
+    end 
 
     -- Draw player
     love.graphics.setColor(colors.player)
@@ -292,7 +306,8 @@ function love.draw()
     local baseX = MAP_WIDTH + 20
     love.graphics.print("Dungeon Status", baseX, 20)
     if player.room then
-        love.graphics.printf("Room: " .. player.room.description, baseX, 60, INFO_WIDTH - TEXT_PADDING)
+        love.graphics.printf("Room: " .. player.room.description .. "\n\n" .. player.room.paragraph,
+        baseX, 60, INFO_WIDTH - TEXT_PADDING)
     else
         love.graphics.print("You are in a dark corridor.", baseX, 60)
     end
@@ -322,9 +337,37 @@ function love.keypressed(key)
 
     if key == "r" then
         walls = {}
-        generateDungeon()
+        local dungeon = generateDungeon()
         placePlayerInStartingRoom()
+        storyToRooms(dungeon)
     elseif key == "escape" then
         love.event.quit()
     end
- end
+end
+
+ -- RAVEN: assign paragraphs of story to dungeon rooms
+ function storyToRooms(dungeon)
+    -- now that dungeon is generated, make sure #paragraphs matches #rooms
+    paragraphs = getParagraphs(story);
+
+    -- make sure number of paragraphs matches number of rooms
+    if #dungeon.rooms < #paragraphs then
+        combineShortest(#paragraphs - #dungeon.rooms, paragraphs);
+    end
+
+    --[[ 
+    -- TODO: write logic for splitting paragraphs when there are too few to fill every room
+    if #dungeon.rooms > #paragraphs then
+        --print(#paragraphs, "...", #dungeon.rooms)
+        --combineShortest(#paragraphs - #dungeon.rooms);
+        --print(#paragraphs, "...", #dungeon.rooms)
+    end
+    ]]
+
+    for i,room in ipairs(dungeon.rooms) do
+        room.paragraph = paragraphs[i]
+        --print("\n" .. room.paragraph)
+        --print("\n--")
+    end
+
+end

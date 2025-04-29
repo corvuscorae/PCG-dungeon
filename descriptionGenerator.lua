@@ -19,7 +19,7 @@ function generateRoomDescription(width, height)
                  getDescription("largest")
 
     -- DEBUG
-    print(desc)
+    --print(desc)
 
     return desc .. " " .. features[math.random(#features)]
 end
