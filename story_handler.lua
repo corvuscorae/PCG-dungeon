@@ -37,6 +37,13 @@ function combineShortest(diff, paragraphs, objectives)
         --print("combining " .. A .. " and " .. B)
         paragraphs[A].text = paragraphs[A].text .. "\n\n" .. paragraphs[B].text;    -- combine to smaller index
         paragraphs[A].index = merge_tables(paragraphs[A].index, paragraphs[B].index);
+        
+        --local ind_str = ""
+        --for i,ind in pairs(paragraphs[A].index) do
+        --    ind_str = ind_str .. tostring(ind) .. " "
+        --end
+        --print(ind_str)
+
         paragraphs[A].objectives = merge_tables(paragraphs[A].objectives, paragraphs[B].objectives);
         resolveMergedObjectives(paragraphs[A], paragraphs[B], objectives);
         table.insert(remove_index, B);                               -- prep to remove large index
@@ -136,10 +143,12 @@ function getObjectives(paragraph, history, active, resolved)
         local add = true
         
         if arrayHas(resolved.index, obj.index) == true then
+            --print("already resolved: " .. obj.text)
             goto continue
         end
         
         if arrayHas(active.index, obj.index) == true then
+            --print("already active: " .. obj.text)
             goto continue
         end
 
@@ -163,26 +172,37 @@ end
 
 function resolveObjective(paragraph, active, resolved)
     -- check to see if any of the active objectives have a resolution in this room
+    local remove_queue = {};
+
     for i,obj in pairs(active.obj) do
-        --print("---")
-        --print(tostring(obj.text))
-        for i,ind in pairs(paragraph.index) do
-            --print(tostring(ind))
-            if arrayHas(obj.resolution_at, ind) then
+        for i,ind in pairs(obj.resolution_at) do
+            if arrayHas(paragraph.index, ind) then
                 print("RESOLVED: " .. obj.text)
                 table.insert(resolved.obj, obj);
                 table.insert(resolved.index, obj.index);
 
-                local activeIndex = indexOf(active.index, obj.index);
-                if activeIndex ~= nil then 
-                    table.remove(active.index, activeIndex);
-                    table.remove(active.obj, activeIndex);      -- should be the same index
-                end
+                --local activeIndex = indexOf(active.index, obj.index);
+                --print(tostring(activeIndex))
+                --if activeIndex ~= nil then 
+                --    -- queue resolved index to be removed later
+                --    table.insert(remove_queue, activeIndex);       
+                --end
             end
+
         end
         
     end
-    --print("-----------------")
+
+    -- remove resolved objective from active
+    for i,res in pairs(resolved.index) do
+        local activeIndex = indexOf(active.index, res);
+        if activeIndex ~= nil then 
+            -- queue resolved index to be removed later
+            table.remove(active.index, activeIndex);
+            table.remove(active.obj, activeIndex);
+        end
+
+    end
 end
 
 function indexOf(t, value)

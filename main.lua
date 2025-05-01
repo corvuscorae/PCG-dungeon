@@ -334,7 +334,12 @@ function love.draw()
     local baseX = MAP_WIDTH + 20
     love.graphics.print("Dungeon Status", baseX, 20)
     if player.room then
-        love.graphics.printf("Room: " .. player.room.description .. "\n", baseX, 60, INFO_WIDTH - TEXT_PADDING);
+        local ind_str = ""
+        for i,ind in pairs(player.room.paragraph.index) do
+            ind_str = ind_str .. tostring(ind) .. " "
+        end
+        love.graphics.printf("Room: " .. ind_str .. "\n" .. 
+            player.room.description .. "\n", baseX, 60, INFO_WIDTH - TEXT_PADDING);
 
         love.graphics.setColor(colors.text.light)
         love.graphics.printf( "\n" .. player.room.paragraph.text .. "\n", baseX, 120, INFO_WIDTH - TEXT_PADDING);
@@ -385,6 +390,7 @@ function love.keypressed(key)
     if move == true then movePlayer(dx, dy) end
 
     if key == "r" then
+        print("-----------------------------------");   -- for console readability
         walls = {}
         local dungeon = generateDungeon()
         placePlayerInStartingRoom()
