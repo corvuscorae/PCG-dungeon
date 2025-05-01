@@ -46,7 +46,10 @@ function love.load()
         floor = {0.5, 0.5, 0.5}, -- Floor and Corridor use the same color now
         grid_line = {0.2, 0.2, 0.2, 0.5}, -- Dim grid lines
         player = {1, 1, 0}, -- yellow
-        text = {1, 1, 1}
+        text = {
+            dark = {0.3, 0.3, 0.3},
+            light = {1, 1, 1}
+        }
     }
 
     -- Dungeon settings
@@ -327,22 +330,28 @@ function love.draw()
     love.graphics.circle("fill", (player.x - 0.5) * CELL_SIZE, (player.y - 0.5) * CELL_SIZE, CELL_SIZE / 3)
 
     -- Right panel - Room info
-    love.graphics.setColor(colors.text)
+    love.graphics.setColor(colors.text.dark)
     local baseX = MAP_WIDTH + 20
     love.graphics.print("Dungeon Status", baseX, 20)
     if player.room then
-        love.graphics.printf("Room: " .. player.room.description .. "\n\n" .. player.room.paragraph.text,
-        baseX, 60, INFO_WIDTH - TEXT_PADDING)
+        love.graphics.printf("Room: " .. player.room.description .. "\n", baseX, 60, INFO_WIDTH - TEXT_PADDING);
+
+        love.graphics.setColor(colors.text.light)
+        love.graphics.printf( "\n" .. player.room.paragraph.text .. "\n", baseX, 120, INFO_WIDTH - TEXT_PADDING);
+        
     else
+        love.graphics.setColor(colors.text.dark)
         love.graphics.print("You are in a dark corridor.", baseX, 60)
     end
 
     -- Bottom panel: objective info
+    love.graphics.setColor(colors.text.light)
     local active_obj_str = objectiveString(active_objectives.obj);
     love.graphics.printf("ACTIVE OBJECTIVES: " .. active_obj_str,
         TEXT_PADDING, (GRID_DIM * CELL_SIZE) + TEXT_PADDING, (GRID_DIM * CELL_SIZE) - TEXT_PADDING);
 
     -- Regenerate instruction
+    love.graphics.setColor(colors.text.dark)
     love.graphics.print("Press 'R' to regenerate.", baseX, WINDOW_HEIGHT - TEXT_PADDING)
 
     --love.graphics.print(tostring(active_objectives[#active_objectives].text), baseX, WINDOW_HEIGHT - TEXT_PADDING*2)
