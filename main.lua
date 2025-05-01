@@ -320,10 +320,10 @@ function love.draw()
     end
 
     -- DEBUG: print room index
-    for _, room in ipairs(dungeon.rooms) do
-        love.graphics.setColor(1, 0, 0, 1)
-        love.graphics.print(room.index, room.x * CELL_SIZE, room.y * CELL_SIZE)
-    end 
+    --for _, room in ipairs(dungeon.rooms) do
+    --    love.graphics.setColor(1, 0, 0, 1)
+    --    love.graphics.print(room.index, room.x * CELL_SIZE, room.y * CELL_SIZE)
+    --end 
 
     -- Draw player
     love.graphics.setColor(colors.player)
@@ -334,12 +334,15 @@ function love.draw()
     local baseX = MAP_WIDTH + 20
     love.graphics.print("Dungeon Status", baseX, 20)
     if player.room then
-        local ind_str = ""
-        for i,ind in pairs(player.room.paragraph.index) do
-            ind_str = ind_str .. tostring(ind) .. " "
-        end
-        love.graphics.printf("Room: " .. ind_str .. "\n" .. 
-            player.room.description .. "\n", baseX, 60, INFO_WIDTH - TEXT_PADDING);
+        --DEBUGL print room paragraph indeces
+        --local ind_str = ""
+        --for i,ind in pairs(player.room.paragraph.index) do
+        --    ind_str = ind_str .. tostring(ind) .. " "
+        --end
+        --love.graphics.printf("Room: " .. ind_str .. "\n" .. 
+        --    player.room.description .. "\n", baseX, 60, INFO_WIDTH - TEXT_PADDING);
+
+        love.graphics.printf("Room: " .. player.room.description .. "\n", baseX, 60, INFO_WIDTH - TEXT_PADDING);
 
         love.graphics.setColor(colors.text.light)
         love.graphics.printf( "\n" .. player.room.paragraph.text .. "\n", baseX, 120, INFO_WIDTH - TEXT_PADDING);
