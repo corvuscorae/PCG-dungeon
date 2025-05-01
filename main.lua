@@ -12,9 +12,19 @@ require("story_handler");
 
 local Entity = require("entity")
 local Wall = require("wall")
-local story = require('text');
-local paragraphs = {};
+local Story = require('text');
+local story_copy = deepCopy(Story); -- so we can maintain a clean version for reload
 local walls = {};
+
+local visit_history = {}
+local active_objectives = {
+    index = {},
+    obj = {}
+}
+local resolved_objectives = {
+    index = {},
+    obj = {}
+}
 
 function love.load()
     math.randomseed(os.time())
@@ -263,12 +273,27 @@ function movePlayer(dx, dy)
 end
 
 --end
-
 function updatePlayerRoom()
     for _, room in ipairs(dungeon.rooms) do
         if player.x >= room.x and player.x < room.x + room.width and
            player.y >= room.y and player.y < room.y + room.height then
             player.room = room
+
+            -- add room paragraph(s) to visit_history
+            for i,p in pairs(room.paragraph.index) do 
+                if arrayHas(visit_history, p) == false then
+                    table.insert(visit_history, p);
+
+                    -- check to see if any of the active objective can be solved
+                    if #active_objectives.obj > 0 then
+                        resolveObjective(room.paragraph, active_objectives, resolved_objectives);
+                    end
+
+                    -- get new objectives from new room 
+                    getObjectives(room.paragraph, visit_history, active_objectives, resolved_objectives);
+                end
+            end
+            
             return
         end
     end
@@ -306,20 +331,35 @@ function love.draw()
     local baseX = MAP_WIDTH + 20
     love.graphics.print("Dungeon Status", baseX, 20)
     if player.room then
-        love.graphics.printf("Room: " .. player.room.description .. "\n\n" .. player.room.paragraph,
+        love.graphics.printf("Room: " .. player.room.description .. "\n\n" .. player.room.paragraph.text,
         baseX, 60, INFO_WIDTH - TEXT_PADDING)
     else
         love.graphics.print("You are in a dark corridor.", baseX, 60)
     end
 
+    -- Bottom panel: objective info
+    local active_obj_str = objectiveString(active_objectives.obj);
+    love.graphics.printf("ACTIVE OBJECTIVES: " .. active_obj_str,
+        TEXT_PADDING, (GRID_DIM * CELL_SIZE) + TEXT_PADDING, (GRID_DIM * CELL_SIZE) - TEXT_PADDING);
+
     -- Regenerate instruction
     love.graphics.print("Press 'R' to regenerate.", baseX, WINDOW_HEIGHT - TEXT_PADDING)
+
+    --love.graphics.print(tostring(active_objectives[#active_objectives].text), baseX, WINDOW_HEIGHT - TEXT_PADDING*2)
 
     -- draw walls
     for _, wall in ipairs(walls) do
         wall:draw()
     end
     
+end
+
+function objectiveString(objs)
+    local str = ""
+    for i,obj in pairs(objs) do
+        str = str .. obj.text .. " "
+    end
+    return str;
 end
 
 function love.keypressed(key) 
@@ -339,8 +379,22 @@ function love.keypressed(key)
         walls = {}
         local dungeon = generateDungeon()
         placePlayerInStartingRoom()
+        story_copy = {}
+        story_copy = deepCopy(Story); -- proceed with clean copy of story
         storyToRooms(dungeon)
-    elseif key == "escape" then
+        visit_history = {}
+
+        -- clear objective history
+        active_objectives = {
+            index = {},
+            obj = {}
+        }
+        resolved_objectives = {
+            index = {},
+            obj = {}
+        }
+    end
+    if key == "escape" then
         love.event.quit()
     end
 end
@@ -348,11 +402,12 @@ end
  -- RAVEN: assign paragraphs of story to dungeon rooms
  function storyToRooms(dungeon)
     -- now that dungeon is generated, make sure #paragraphs matches #rooms
-    paragraphs = getParagraphs(story);
+    --story = getParagraphs(story);
 
     -- make sure number of paragraphs matches number of rooms
-    if #dungeon.rooms < #paragraphs then
-        combineShortest(#paragraphs - #dungeon.rooms, paragraphs);
+    if #dungeon.rooms < #story_copy then
+        combineShortest(#story_copy - #dungeon.rooms, story_copy, 
+            {active = active_objectives, resolved = resolved_objectives});
     end
 
     --[[ 
@@ -365,7 +420,7 @@ end
     ]]
 
     for i,room in ipairs(dungeon.rooms) do
-        room.paragraph = paragraphs[i]
+        room.paragraph = story_copy[i]
         --print("\n" .. room.paragraph)
         --print("\n--")
     end

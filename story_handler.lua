@@ -1,5 +1,5 @@
-
-function combineShortest(diff, paragraphs)
+-- RAVEN
+function combineShortest(diff, paragraphs, objectives)
     -- print(diff)
     
     -- make a sorted version of paragraphs
@@ -7,7 +7,7 @@ function combineShortest(diff, paragraphs)
     for i, p in ipairs(paragraphs) do
         sortedParagraphs[i] = {
             story_index = i,
-            text =  p
+            text =  p.text
         };
     end
     table.sort(sortedParagraphs, function(a, b)
@@ -35,7 +35,10 @@ function combineShortest(diff, paragraphs)
         local B = p[1] < p[2] and p[2] or p[1]
 
         --print("combining " .. A .. " and " .. B)
-        paragraphs[A] = paragraphs[A] .. "\n\n" .. paragraphs[B];    -- combine to smaller index
+        paragraphs[A].text = paragraphs[A].text .. "\n\n" .. paragraphs[B].text;    -- combine to smaller index
+        paragraphs[A].index = merge_tables(paragraphs[A].index, paragraphs[B].index);
+        paragraphs[A].objectives = merge_tables(paragraphs[A].objectives, paragraphs[B].objectives);
+        resolveMergedObjectives(paragraphs[A], paragraphs[B], objectives);
         table.insert(remove_index, B);                               -- prep to remove large index
     end
 
@@ -50,6 +53,26 @@ function combineShortest(diff, paragraphs)
         table.remove(paragraphs, r)          -- remove larger index
     end
 
+end
+
+function resolveMergedObjectives(paragraphA, paragraphB, objectives)
+    -- auto-resolve any objectives whose resolution is in the other paragraph
+    for i,obj in pairs(paragraphA.objectives) do
+        for j,ind in pairs(paragraphB.index) do
+            if arrayHas(obj.resolution_at, ind) then
+                table.insert(objectives.resolved.obj, obj);
+                table.insert(objectives.resolved.index, obj.index);
+            end
+        end
+    end
+    for i,obj in pairs(paragraphB.objectives) do
+        for j,ind in pairs(paragraphA.index) do
+            if arrayHas(obj.resolution_at, ind) then
+                table.insert(objectives.resolved.obj, obj);
+                table.insert(objectives.resolved.index, obj.index);
+            end
+        end
+    end
 end
 
 function getShortest(sortedParagraphs, paragraphs)
@@ -106,6 +129,71 @@ function getShortest(sortedParagraphs, paragraphs)
     return {pick_index, min}
 end
 
+function getObjectives(paragraph, history, active, resolved)
+    -- add objective from paragraph to active_objective 
+    --      IFF resolution has not yet been seen
+    for i,obj in pairs(paragraph.objectives) do
+        local add = true
+        
+        if arrayHas(resolved.index, obj.index) == true then
+            goto continue
+        end
+        
+        if arrayHas(active.index, obj.index) == true then
+            goto continue
+        end
+
+        for j,res in pairs(obj.resolution_at) do
+            --print(res)
+            if arrayHas(history, res) == true then
+                add = false;
+                break;
+            end
+        end
+
+        if add == true then
+            print("NEW OBJECTIVE: " .. obj.text)
+            table.insert(active.obj, obj);
+            table.insert(active.index, obj.index);
+        end
+
+        :: continue ::
+    end
+end
+
+function resolveObjective(paragraph, active, resolved)
+    -- check to see if any of the active objectives have a resolution in this room
+    for i,obj in pairs(active.obj) do
+        --print("---")
+        --print(tostring(obj.text))
+        for i,ind in pairs(paragraph.index) do
+            --print(tostring(ind))
+            if arrayHas(obj.resolution_at, ind) then
+                print("RESOLVED: " .. obj.text)
+                table.insert(resolved.obj, obj);
+                table.insert(resolved.index, obj.index);
+
+                local activeIndex = indexOf(active.index, obj.index);
+                if activeIndex ~= nil then 
+                    table.remove(active.index, activeIndex);
+                    table.remove(active.obj, activeIndex);      -- should be the same index
+                end
+            end
+        end
+        
+    end
+    --print("-----------------")
+end
+
+function indexOf(t, value)
+    for i, v in ipairs(t) do
+        if v == value then
+            return i
+        end
+    end
+    return nil  
+end
+
 function arrayHas(arr, val)
     for i,v in pairs(arr) do
         if v == val then
@@ -113,4 +201,36 @@ function arrayHas(arr, val)
         end
     end
     return false
+end
+
+function deepCopy(orig, seen)
+    if type(orig) ~= 'table' then
+        return orig
+    end
+
+    if seen and seen[orig] then
+        return seen[orig]
+    end
+
+    local copy = {}
+    seen = seen or {}
+    seen[orig] = copy
+
+    for k, v in pairs(orig) do
+        copy[deepCopy(k, seen)] = deepCopy(v, seen)
+    end
+
+    setmetatable(copy, getmetatable(orig)) 
+    return copy
+end
+
+function merge_tables(t1, t2)
+    local result = {}
+    for k, v in pairs(t1) do
+        table.insert(result, v)
+    end
+    for k, v in pairs(t2) do
+        table.insert(result, v)
+    end
+    return result
 end
